@@ -6,6 +6,8 @@ class Task:
     description: str
     duration_minutes: int
     priority:  int # scale of 1-5 (5 highest)
+    time: int #minutes since midnight
+    pet_name: str
     frequency: str = "daily"
     completed: bool = False
     number: int = field(init=False)
@@ -60,12 +62,18 @@ class Owner:
         all_tasks: List[Task] = []
         for pet in self.pets:
             all_tasks.extend(pet.tasks)
-
         return all_tasks
+    
+    def get_all_task_by_pet(self):
+        tasks_by_pet = {}
+        for pet in self.pets:
+            tasks_by_pet[pet.name] = pet.get_tasks()
+        return tasks_by_pet
 # -------------------------
 # Scheduling Logic
 # -------------------------
 
+@dataclass
 class Scheduler:
     def generate_plan(self, owner: Owner) -> Tuple[List[Task], List[str]]:
         """
@@ -100,3 +108,9 @@ class Scheduler:
             )
 
         return selected, explanation
+    
+    def sort_by_time(self, tasks: List[Task]) -> List[Task]:
+        return sorted(tasks, key=lambda t: t.time)
+    
+    def filter_by_completed(self, tasks: List[Task], completed: bool) -> List[Task]:
+        return [t for t in tasks if t.completed == completed]
