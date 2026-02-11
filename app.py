@@ -4,6 +4,7 @@ import streamlit as st
 
 from pawpal_system import Owner, Pet, Scheduler, Task
 
+DATA_FILE = "data.json"
 
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 st.title("🐾 PawPal+")
@@ -11,9 +12,17 @@ st.caption("Pet care planner")
 
 
 if "owners" not in st.session_state:
+    loaded_owners = Owner.load_from_json(DATA_FILE)
     st.session_state.owners = {}
+    for owner in loaded_owners:
+        st.session_state.owners[owner.name] = {
+            "daily_time_available": owner.daily_time_available,
+            "pets": {pet.name: pet for pet in owner.pets},
+        }
 if "active_owner" not in st.session_state:
-    st.session_state.active_owner = None
+    st.session_state.active_owner = (
+        next(iter(st.session_state.owners)) if st.session_state.owners else None
+    )
 if "scheduler" not in st.session_state:
     st.session_state.scheduler = Scheduler()
 
@@ -40,6 +49,13 @@ def build_owner_model(owner_name: str, owner_record: dict) -> Owner:
     for pet in owner_record["pets"].values():
         owner.add_pet(pet)
     return owner
+
+
+def save_app_state() -> None:
+    owners_to_save = []
+    for owner_name, owner_record in st.session_state.owners.items():
+        owners_to_save.append(build_owner_model(owner_name, owner_record))
+    Owner.save_to_json(owners_to_save, DATA_FILE)
 
 
 st.subheader("Owners")
@@ -69,6 +85,7 @@ with owner_col3:
                 "pets": {},
             }
             st.session_state.active_owner = cleaned_owner
+            save_app_state()
             st.success(f"Added owner '{cleaned_owner}'.")
 
 if st.session_state.owners:
@@ -106,6 +123,7 @@ if st.session_state.owners:
         )
         if st.button("Save owner settings"):
             active_record["daily_time_available"] = int(updated_daily_time)
+            save_app_state()
             st.success(f"Updated settings for '{st.session_state.active_owner}'.")
 else:
     st.info("No owners yet. Add an owner to continue.")
@@ -137,6 +155,7 @@ else:
                 )
             else:
                 active_record["pets"][cleaned_pet] = Pet(cleaned_pet, new_pet_species)
+                save_app_state()
                 st.success(
                     f"Added pet '{cleaned_pet}' to owner '{st.session_state.active_owner}'."
                 )
@@ -198,6 +217,7 @@ else:
                 due_date=due,
             )
             active_record["pets"][task_pet].add_task(task)
+            save_app_state()
             st.success(
                 f"Added task #{task.number} for {task_pet} (owner: {st.session_state.active_owner})."
             )
@@ -294,6 +314,7 @@ else:
                 owner_for_completion, option_map[selected_label]
             )
             if ok:
+                save_app_state()
                 st.success(
                     "Task marked complete. If frequency is daily/weekly, next occurrence was created."
                 )

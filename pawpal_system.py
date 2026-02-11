@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import List, Tuple, ClassVar, Optional
 from datetime import date, timedelta
+import json
+from pathlib import Path
 
 @dataclass
 class Task:
@@ -73,6 +75,93 @@ class Owner:
         for pet in self.pets:
             tasks_by_pet[pet.name] = pet.get_tasks()
         return tasks_by_pet
+
+    @classmethod
+    def save_to_json(cls, owners: List["Owner"], file_path: str = "data.json") -> None:
+        data = {"owners": []}
+        for owner in owners:
+            owner_payload = {
+                "name": owner.name,
+                "daily_time_available": owner.daily_time_available,
+                "pets": [],
+            }
+            for pet in owner.pets:
+                pet_payload = {
+                    "name": pet.name,
+                    "species": pet.species,
+                    "tasks": [],
+                }
+                for task in pet.tasks:
+                    pet_payload["tasks"].append(
+                        {
+                            "number": task.number,
+                            "description": task.description,
+                            "duration_minutes": task.duration_minutes,
+                            "priority": task.priority,
+                            "time": task.time,
+                            "pet_name": task.pet_name,
+                            "frequency": task.frequency,
+                            "completed": task.completed,
+                            "due_date": task.due_date.isoformat(),
+                        }
+                    )
+                owner_payload["pets"].append(pet_payload)
+            data["owners"].append(owner_payload)
+
+        Path(file_path).write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+    @classmethod
+    def load_from_json(cls, file_path: str = "data.json") -> List["Owner"]:
+        path = Path(file_path)
+        if not path.exists():
+            return []
+
+        raw = path.read_text(encoding="utf-8").strip()
+        if not raw:
+            return []
+
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            return []
+        owners: List[Owner] = []
+        max_task_number = 0
+
+        for owner_data in payload.get("owners", []):
+            owner = Owner(
+                name=owner_data.get("name", ""),
+                daily_time_available=int(owner_data.get("daily_time_available", 0)),
+            )
+            for pet_data in owner_data.get("pets", []):
+                pet = Pet(
+                    name=pet_data.get("name", ""),
+                    species=pet_data.get("species", "Other"),
+                )
+                for task_data in pet_data.get("tasks", []):
+                    due_date_raw = task_data.get("due_date", date.today().isoformat())
+                    try:
+                        due_date_value = date.fromisoformat(due_date_raw)
+                    except ValueError:
+                        due_date_value = date.today()
+
+                    task = Task(
+                        description=task_data.get("description", ""),
+                        duration_minutes=int(task_data.get("duration_minutes", 0)),
+                        priority=int(task_data.get("priority", 1)),
+                        time=int(task_data.get("time", 0)),
+                        pet_name=task_data.get("pet_name", pet.name),
+                        frequency=task_data.get("frequency", "daily"),
+                        completed=bool(task_data.get("completed", False)),
+                        due_date=due_date_value,
+                    )
+                    task.number = int(task_data.get("number", task.number))
+                    max_task_number = max(max_task_number, task.number)
+                    pet.add_task(task)
+                owner.add_pet(pet)
+            owners.append(owner)
+
+        Task._counter = max(Task._counter, max_task_number)
+        return owners
 # -------------------------
 # Scheduling Logic
 # -------------------------
