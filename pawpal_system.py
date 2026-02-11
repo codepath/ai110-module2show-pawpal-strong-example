@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Tuple, ClassVar, Optional
+from typing import List, Tuple, ClassVar, Union
 from datetime import date, timedelta
 import json
 from pathlib import Path
@@ -8,7 +8,7 @@ from pathlib import Path
 class Task:
     description: str
     duration_minutes: int
-    priority:  int # scale of 1-5 (5 highest)
+    priority: str  # low, medium, high
     time: int #minutes since midnight
     pet_name: str
     frequency: str = "daily" #daily, weekly, monthly
@@ -17,14 +17,43 @@ class Task:
 
     number: int = field(init=False)
     _counter: ClassVar[int] = 0 # class variable for unique numbering
+    _PRIORITY_RANKS: ClassVar[dict[str, int]] = {"low": 1, "medium": 2, "high": 3}
 
 
     def __post_init__(self) -> None:
         #assign_number function called after init to assign unique number
         Task._counter += 1
         self.number = self._counter
-        
+        self.priority = self._normalize_priority(self.priority)
 
+    @classmethod
+    def _normalize_priority(cls, value: Union[str, int]) -> str:
+        if isinstance(value, int):
+            if value <= 2:
+                return "low"
+            if value == 3:
+                return "medium"
+            return "high"
+
+        raw = str(value).strip().lower()
+        if raw in cls._PRIORITY_RANKS:
+            return raw
+        if raw.isdigit():
+            return cls._normalize_priority(int(raw))
+        if raw.startswith("h"):
+            return "high"
+        if raw.startswith("m"):
+            return "medium"
+        return "low"
+
+    @property
+    def priority_rank(self) -> int:
+        return self._PRIORITY_RANKS[self.priority]
+
+    @property
+    def priority_label(self) -> str:
+        return self.priority.title()
+        
     def mark_complete(self) -> None:
         self.completed = True
 
@@ -147,7 +176,7 @@ class Owner:
                     task = Task(
                         description=task_data.get("description", ""),
                         duration_minutes=int(task_data.get("duration_minutes", 0)),
-                        priority=int(task_data.get("priority", 1)),
+                        priority=task_data.get("priority", "low"),
                         time=int(task_data.get("time", 0)),
                         pet_name=task_data.get("pet_name", pet.name),
                         frequency=task_data.get("frequency", "daily"),
@@ -178,8 +207,8 @@ class Scheduler:
         selected: List[Task] = []
 
         tasks = owner.get_all_tasks()
-        #sort by priority (high to low), then by duration (short to long)
-        tasks.sort(key=lambda t: (-t.priority, t.duration_minutes))
+        # sort by priority (high to low), then by start time (earlier first)
+        tasks.sort(key=lambda t: (-t.priority_rank, t.time))
 
         for task in tasks:
             
@@ -196,7 +225,7 @@ class Scheduler:
             selected.append(task)
             available_minutes -= task.duration_minutes
             explanation.append(
-                f"Scheduled '{task.description}' (priority {task.priority})."
+                f"Scheduled '{task.description}' (priority {task.priority_label})."
             )
 
         return selected, explanation

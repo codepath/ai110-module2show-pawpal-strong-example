@@ -37,6 +37,15 @@ def to_hhmm(minutes: int) -> str:
     return f"{h:02d}:{m:02d}"
 
 
+def format_priority(priority: str) -> str:
+    normalized = str(priority).strip().lower()
+    if normalized == "high":
+        return "🔴 High"
+    if normalized == "medium":
+        return "🟡 Medium"
+    return "🟢 Low"
+
+
 def get_active_owner_record():
     owner_name = st.session_state.active_owner
     if not owner_name:
@@ -191,7 +200,7 @@ else:
             key="task_duration",
         )
         priority_label = st.selectbox(
-            "Priority", ["1", "2", "3", "4", "5"], index=4, key="task_priority"
+            "Priority", ["Low", "Medium", "High"], index=2, key="task_priority"
         )
     with t_col2:
         task_time = st.time_input("Start time", value=time(8, 0), step=300, key="task_time")
@@ -209,7 +218,7 @@ else:
             task = Task(
                 description=desc,
                 duration_minutes=int(task_duration),
-                priority=int(priority_label),
+                priority=priority_label,
                 time=to_minutes(task_time),
                 pet_name=task_pet,
                 frequency=frequency,
@@ -231,7 +240,7 @@ else:
                     "pet": t.pet_name,
                     "description": t.description,
                     "duration": t.duration_minutes,
-                    "priority": t.priority,
+                    "priority": format_priority(t.priority),
                     "time": to_hhmm(t.time),
                     "frequency": t.frequency,
                     "due_date": t.due_date.isoformat(),
@@ -267,9 +276,9 @@ elif st.button("Generate schedule"):
                     "description": t.description,
                     "time": to_hhmm(t.time),
                     "duration": t.duration_minutes,
-                    "priority": t.priority,
+                    "priority": format_priority(t.priority),
                 }
-                for t in scheduler.sort_by_time(plan)
+                for t in plan
             ]
         )
 
