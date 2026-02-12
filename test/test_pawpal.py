@@ -8,12 +8,12 @@ def test_ordering_by_priority_then_duration():
     dog = Pet("Luna", "Dog")
     cat = Pet("Milo", "Cat")
 
-    # same priority, different durations
-    dog.add_task(Task("Short meds", 5, 4, time=480, pet_name="Luna"))
-    dog.add_task(Task("Long grooming", 20, 4, time=540, pet_name="Luna"))
+    # same priority level, different start times
+    dog.add_task(Task("Short meds", 5, "medium", time=480, pet_name="Luna"))
+    dog.add_task(Task("Long grooming", 20, "medium", time=540, pet_name="Luna"))
 
     # higher priority should come first
-    cat.add_task(Task("Walk", 15, 5, time=600, pet_name="Milo"))
+    cat.add_task(Task("Walk", 15, "high", time=600, pet_name="Milo"))
 
     owner.add_pet(dog)
     owner.add_pet(cat)
