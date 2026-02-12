@@ -97,3 +97,39 @@
 
 - What is one important thing you learned about designing systems or working with AI on this project?
     - Clear system design and careful testing make it much easier to use AI effectively without losing control of the project.
+
+## 6. Challenge 3: Multi-Model Prompt Comparison
+
+**Task**
+
+I asked two models (OpenAI and Claude) to generate a Python method to detect overlapping tasks and return readable warning messages.
+
+
+### Comparison
+
+**OpenAI’s Solution**
+
+* Sorted tasks by start time
+* Compared only neighboring tasks
+* Used type hints and clear formatting
+* Returned clean, structured warning messages
+* Efficient approach (O(n log n) due to sorting)
+
+**Claude’s Solution**
+
+* Used nested loops to compare every task pair
+* Less efficient (O(n²))
+* Risked duplicate warnings
+* Simpler but less optimized structure
+
+
+**Which Was More Pythonic?**
+
+OpenAI’s solution was more modular and Pythonic because it:
+
+* Used sorting and neighbor comparison instead of nested loops
+* Was more efficient and scalable
+* Included clearer structure and typing
+* Kept the function focused and clean
+
+Both worked logically, but OpenAI’s version was better in terms of readability, efficiency, and maintainability.
